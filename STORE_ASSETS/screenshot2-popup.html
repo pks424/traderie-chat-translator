@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 1280px; height: 800px; overflow: hidden;
+      font-family: 'Segoe UI', 'Noto Sans KR', Arial, sans-serif;
+      background: linear-gradient(135deg, #17181c 0%, #1f2f2e 100%);
+      display: flex; align-items: center; justify-content: center; gap: 60px;
+    }
+
+    /* 왼쪽 소개 텍스트 */
+    .intro { max-width: 420px; color: #fff; }
+    .intro .logo-row { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+    .intro .mark { width: 44px; height: 48px;
+      background: linear-gradient(135deg, #fe6e20 0%, #fe6e20 49%, #febe00 51%, #febe00 100%);
+      clip-path: polygon(50% 0, 100% 30%, 80% 42%, 50% 24%, 20% 42%, 0 30%); }
+    .intro h1 { font-size: 26px; }
+    .intro p { color: #b9bbc0; font-size: 15px; line-height: 1.8; margin-bottom: 16px; }
+    .intro ul { list-style: none; }
+    .intro li { color: #dcdde0; font-size: 14px; line-height: 2.1; }
+    .intro li::before { content: '✓  '; color: #19bcb0; font-weight: 700; }
+
+    /* 오른쪽 팝업 재현 */
+    .popup {
+      width: 340px; background: #fff; border-radius: 12px; overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,.5);
+      font-size: 14px; color: #202124;
+    }
+    .header { background: linear-gradient(135deg, #1a73e8, #0d47a1); color: white; padding: 16px; }
+    .header h2 { font-size: 15px; font-weight: 600; }
+    .header .subtitle { font-size: 11px; opacity: .85; margin-top: 3px; }
+    .content { padding: 16px; }
+    .section-title { font-size: 11px; font-weight: 600; color: #5f6368; text-transform: uppercase; letter-spacing: .5px; margin: 14px 0 8px; }
+    .section-title:first-child { margin-top: 0; }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; background: #f8f9fa; border-radius: 6px; margin-bottom: 8px; }
+    .toggle-row .label-text { font-size: 13px; }
+    .toggle-row .label-sub { font-size: 11px; color: #5f6368; margin-top: 2px; }
+    .switch { width: 38px; height: 22px; background: #1a73e8; border-radius: 22px; position: relative; flex-shrink: 0; }
+    .switch::before { content: ''; position: absolute; width: 16px; height: 16px; background: #fff; border-radius: 50%; top: 3px; right: 3px; }
+    .field label { display: block; font-size: 12px; color: #3c4043; font-weight: 500; margin: 8px 0 5px; }
+    .select { width: 100%; padding: 8px 10px; border: 1px solid #dadce0; border-radius: 6px; font-size: 13px; color: #202124; background: #fff; }
+    .btn-save { width: 100%; padding: 10px; background: #1a73e8; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; margin-top: 14px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="intro">
+    <div class="logo-row">
+      <div class="mark"></div>
+      <h1>Traderie Chat Translator</h1>
+    </div>
+    <p>traderie.com 채팅을 실시간으로 자동 번역.<br>내 언어로 입력하면 상대 언어로 전송됩니다.</p>
+    <ul>
+      <li>발신/수신 메시지 자동 번역</li>
+      <li>Google 무료 · Gemini · Claude · ChatGPT 번역 엔진</li>
+      <li>게임 용어 사전 (Vex, Ohm, Enigma 유지)</li>
+      <li>채팅방별 번역 ON/OFF (Alt+T)</li>
+      <li>API 키는 브라우저에만 저장 — 수집 없음</li>
+    </ul>
+  </div>
+
+  <div class="popup">
+    <div class="header">
+      <h2>🌐 Traderie 채팅 번역기</h2>
+      <div class="subtitle">traderie.com 채팅 자동 번역 확장 프로그램</div>
+    </div>
+    <div class="content">
+      <div class="section-title">📤 발신 메시지 설정</div>
+      <div class="toggle-row">
+        <div>
+          <div class="label-text">발신 메시지 자동 번역</div>
+          <div class="label-sub">Enter 시 내 메시지를 자동으로 번역하여 전송</div>
+        </div>
+        <div class="switch"></div>
+      </div>
+      <div class="field">
+        <label>✏️ 내가 입력한 언어를 → 어떤 언어로 번역하여 전송할까요?</label>
+        <div class="select">영어 (English)</div>
+      </div>
+
+      <div class="section-title">📥 수신 메시지 설정</div>
+      <div class="toggle-row">
+        <div>
+          <div class="label-text">상대방 메시지 자동 번역</div>
+          <div class="label-sub">새 메시지를 받으면 자동으로 번역하여 표시</div>
+        </div>
+        <div class="switch"></div>
+      </div>
+      <div class="field">
+        <label>👁️ 상대방 메시지를 → 어떤 언어로 번역하여 보여줄까요?</label>
+        <div class="select">한국어</div>
+      </div>
+
+      <div class="section-title">🤖 번역 엔진 설정</div>
+      <div class="field">
+        <div class="select">Google 번역 (무료, API 키 불필요)</div>
+      </div>
+
+      <div class="btn-save">저장하기</div>
+    </div>
+  </div>
+</body>
+</html>

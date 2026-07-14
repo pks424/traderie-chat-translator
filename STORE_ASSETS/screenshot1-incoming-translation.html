@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 1280px; height: 800px; overflow: hidden;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #17181c;
+      display: flex; flex-direction: column;
+    }
+
+    /* 상단 네비 */
+    .topbar {
+      height: 64px; background: #101114;
+      display: flex; align-items: center; gap: 24px;
+      padding: 0 32px; border-bottom: 1px solid #26272c;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand .mark {
+      width: 30px; height: 33px;
+      background:
+        linear-gradient(135deg, #fe6e20 0%, #fe6e20 49%, #febe00 51%, #febe00 100%);
+      clip-path: polygon(50% 0, 100% 28%, 82% 38%, 50% 20%, 18% 38%, 0 28%);
+    }
+    .brand .mark2 { position: relative; margin-left: -40px; margin-top: 14px;
+      width: 30px; height: 22px; background: #19bcb0;
+      clip-path: polygon(0 0, 18% 10%, 18% 55%, 50% 75%, 82% 55%, 82% 10%, 100% 0, 100% 68%, 50% 100%, 0 68%);
+    }
+    .brand .name { color: #fff; font-weight: 700; letter-spacing: 2px; font-size: 18px; margin-left: 8px; }
+    .nav { display: flex; gap: 20px; color: #b9bbc0; font-size: 14px; }
+    .topbar .search {
+      margin-left: auto; width: 220px; padding: 8px 14px;
+      background: #26272c; border-radius: 20px; color: #7d7f85; font-size: 13px;
+    }
+    .btn-add { background: #febe00; color: #17181c; font-weight: 600; font-size: 13px; padding: 8px 14px; border-radius: 6px; }
+
+    .layout { flex: 1; display: flex; min-height: 0; }
+
+    /* 좌측 대화 목록 */
+    .chatlist {
+      width: 300px; background: #1b1c21; border-right: 1px solid #26272c;
+      padding: 20px 0; display: flex; flex-direction: column;
+    }
+    .chatlist h2 { color: #fff; font-size: 18px; padding: 0 20px 14px; }
+    .tabs { display: flex; gap: 8px; padding: 0 20px 14px; }
+    .tab { font-size: 12px; color: #b9bbc0; border: 1px solid #3a3b40; padding: 4px 12px; border-radius: 14px; }
+    .tab.active { border-color: #19bcb0; color: #19bcb0; }
+    .chat-item { display: flex; align-items: center; gap: 12px; padding: 12px 20px; }
+    .chat-item.active { background: #26272c; }
+    .avatar { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; font-size: 15px; position: relative; }
+    .avatar .dot { position: absolute; right: -1px; bottom: -1px; width: 10px; height: 10px; background: #22c55e; border-radius: 50%; border: 2px solid #1b1c21; }
+    .chat-item .uname { color: #e8e9eb; font-size: 14px; font-weight: 500; }
+
+    /* 채팅 영역 */
+    .chat { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+    .chat-header { padding: 14px 24px; border-bottom: 1px solid #26272c; display: flex; align-items: center; gap: 12px; }
+    .chat-header .uname { color: #fff; font-size: 16px; font-weight: 600; }
+    .notice { text-align: center; color: #7d7f85; font-size: 12px; padding: 10px; }
+
+    .messages { flex: 1; padding: 10px 28px; display: flex; flex-direction: column; gap: 18px; overflow: hidden; }
+    .msg { display: flex; gap: 12px; max-width: 760px; }
+    .msg .body { flex: 1; }
+    .msg .meta { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+    .msg .meta .who { color: #e8e9eb; font-weight: 600; font-size: 14px; }
+    .msg .meta .time { color: #6b6d73; font-size: 11px; }
+    .msg .text { background: #26272c; color: #dcdde0; font-size: 14px; padding: 10px 14px; border-radius: 10px; line-height: 1.5; display: inline-block; }
+
+    /* 번역 뱃지 */
+    .tct { display: block; margin-top: 6px; padding: 6px 10px;
+      background: #e8f0fe; border-left: 3px solid #1a73e8; border-radius: 0 6px 6px 0;
+      font-size: 13px; color: #1a1a1a; line-height: 1.5; max-width: 520px; }
+
+    /* 입력 바 */
+    .chatbar { padding: 14px 24px; border-top: 1px solid #26272c; display: flex; gap: 12px; align-items: center; }
+    .chatbar .input { flex: 1; background: #101114; border: 1px solid #3a3b40; border-radius: 8px; padding: 11px 14px; color: #7d7f85; font-size: 14px; }
+    .chatbar .send { width: 40px; height: 38px; background: #19bcb0; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 17px; }
+
+    /* 플로팅 토글 */
+    .floating { position: fixed; bottom: 80px; right: 20px; background: #1a73e8; color: #fff; font-size: 12px; padding: 7px 13px; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <div class="mark"></div><div class="mark2"></div>
+      <div class="name">TRADERIE</div>
+    </div>
+    <div class="nav"><span>Marketplace</span><span>Community</span></div>
+    <div class="search">찾기...</div>
+    <div class="btn-add">리스트 추가</div>
+  </div>
+
+  <div class="layout">
+    <div class="chatlist">
+      <h2>Messages</h2>
+      <div class="tabs"><div class="tab active">All</div><div class="tab">요청</div><div class="tab">Archived</div></div>
+      <div class="chat-item active"><div class="avatar" style="background:#7c3aed;">V<span class="dot"></span></div><div class="uname">VixD2R</div></div>
+      <div class="chat-item"><div class="avatar" style="background:#0891b2;">R<span class="dot"></span></div><div class="uname">RemixQ7438</div></div>
+      <div class="chat-item"><div class="avatar" style="background:#ca8a04;">H</div><div class="uname">hwana0511</div></div>
+    </div>
+
+    <div class="chat">
+      <div class="chat-header"><div class="avatar" style="background:#7c3aed;">V<span class="dot"></span></div><div class="uname">VixD2R</div></div>
+      <div class="notice">Your messages will only be saved for one month</div>
+
+      <div class="messages">
+        <div class="msg">
+          <div class="avatar" style="background:#7c3aed;">V</div>
+          <div class="body">
+            <div class="meta"><span class="who">VixD2R</span><span class="time">오후 7:21</span></div>
+            <span class="text">hi, is the Enigma still available? i can pay vex and ohm</span>
+            <span class="tct">🌐 안녕하세요, Enigma 아직 판매 중인가요? Vex와 Ohm으로 지불할 수 있어요</span>
+          </div>
+        </div>
+
+        <div class="msg">
+          <div class="avatar" style="background:#16a34a;">Y</div>
+          <div class="body">
+            <div class="meta"><span class="who">You</span><span class="time">오후 7:23</span></div>
+            <span class="text">Yes, it's available. Please add me in game.</span>
+          </div>
+        </div>
+
+        <div class="msg">
+          <div class="avatar" style="background:#7c3aed;">V</div>
+          <div class="body">
+            <div class="meta"><span class="who">VixD2R</span><span class="time">오후 7:24</span></div>
+            <span class="text">nah its okay lets go with vex, i am not gonna make this hard</span>
+            <span class="tct">🌐 아니에요 괜찮아요, Vex로 하죠. 어렵게 만들지 않을게요</span>
+          </div>
+        </div>
+
+        <div class="msg">
+          <div class="avatar" style="background:#7c3aed;">V</div>
+          <div class="body">
+            <div class="meta"><span class="who">VixD2R</span><span class="time">오후 7:28</span></div>
+            <span class="text">np buddy, have a nice day</span>
+            <span class="tct">🌐 천만에요 친구, 좋은 하루 보내세요</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="chatbar">
+        <div class="input">고마워요, 거래 잘 했습니다!  ← 한글로 입력하고 Enter만 누르면 영어로 번역되어 전송</div>
+        <div class="send">➤</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="floating">🌐 번역 ON</div>
+</body>
+</html>

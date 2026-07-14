@@ -84,6 +84,17 @@
 
 ---
 
+## 크롬 웹스토어 배포
+
+배포 절차·등록 자료·체크리스트는 [STORE_ASSETS/store-description.md](STORE_ASSETS/store-description.md) 참조.
+
+- 배포 zip 생성: `python -c` 스크립트 또는 store-description.md의 명령 참조 (스토어 필수 파일만 포함)
+- 개인정보처리방침: [privacy-policy.html](privacy-policy.html) → GitHub Pages로 호스팅
+  (`https://pks424.github.io/traderie-chat-translator/privacy-policy.html`)
+- 스크린샷: `STORE_ASSETS/screenshot*.html`을 Chrome에서 열어 1280×800 캡처
+
+---
+
 ## 개인정보 및 보안
 
 - 입력/수신 텍스트는 선택한 번역 엔진으로만 전송됩니다.
