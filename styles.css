@@ -1,0 +1,46 @@
+
+/* ── 수신 메시지 번역 뱃지 ── */
+.tct-translation {
+  display: block;
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: #e8f0fe;
+  border-left: 3px solid #1a73e8;
+  border-radius: 0 6px 6px 0;
+  font-size: 12px;
+  color: #1a1a1a;
+  line-height: 1.5;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+  user-select: text;
+}
+.tct-translation-icon {
+  margin-right: 4px;
+  font-style: normal;
+}
+.tct-translation.tct-error {
+  background: #fce8e6;
+  border-left-color: #d93025;
+  color: #5f2120;
+  font-size: 11px;
+}
+
+/* 토스트 알림 */
+.tct-toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #323232;
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+  z-index: 999999;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+.tct-toast.show { opacity: 1; }
+.tct-toast.error { background: #d93025; }
