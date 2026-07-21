@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Traderie Chat Translator",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Auto-translate Traderie chat. Type in your language, send in theirs. Incoming messages are translated instantly.",
   "permissions": [
     "storage"
@@ -22,7 +22,7 @@
       "matches": [
         "https://traderie.com/*"
       ],
-      "js": ["content.js"],
+      "js": ["glossary-defaults.js", "content.js"],
       "css": ["styles.css"],
       "run_at": "document_idle"
     }

@@ -118,7 +118,8 @@ function setCachedTranslation(text, targetLang, sourceLang, result) {
 }
 
 // 설정 불러오기
-const DEFAULT_SETTINGS = { targetLang: 'ko', outLang: 'en', autoTranslate: true, autoOutgoing: true, showOutgoingTranslation: false, cloudApiKey: '', aiProvider: 'google_free', aiApiKey: '', glossary: [], translationTone: 'natural', showFloatingBtn: true };
+// glossary 기본값은 glossary-defaults.js의 DEFAULT_GLOSSARY (룬 33종)
+const DEFAULT_SETTINGS = { targetLang: 'ko', outLang: 'en', autoTranslate: true, autoOutgoing: true, showOutgoingTranslation: false, cloudApiKey: '', aiProvider: 'google_free', aiApiKey: '', glossary: DEFAULT_GLOSSARY, translationTone: 'natural', showFloatingBtn: true };
 async function getSettings() {
   return new Promise((resolve) => {
     if (!chrome.runtime?.id) return resolve({ ...DEFAULT_SETTINGS });
@@ -134,7 +135,8 @@ async function getSettings() {
           cloudApiKey:              result.cloudApiKey   || '',
           aiProvider:               result.aiProvider    || 'google_free',
           aiApiKey:                 result.aiApiKey      || '',
-          glossary:                 result.glossary      || [],
+          // 저장된 적 없을 때만 기본 룬 사전 적용 (사용자가 전부 삭제한 빈 배열은 유지)
+          glossary:                 result.glossary      || DEFAULT_GLOSSARY,
           translationTone:          result.translationTone || 'natural',
           showFloatingBtn:          result.showFloatingBtn !== false
         });
@@ -146,12 +148,22 @@ async function getSettings() {
 }
 
 // ─── 용어 사전: 번역 전 치환 → 번역 후 복원 ───
+// 영문 용어는 단어 경계(\b) 필수 — El, Um 같은 짧은 룬 이름이
+// Hello, drum 등 일반 단어 내부에 매칭되는 것 방지.
+// 한글 용어는 조사가 붙어 경계 없이 이어지므로(예: "벡스로") 부분 일치 사용.
+function glossaryRegex(term) {
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return /^[A-Za-z0-9 '-]+$/.test(term)
+    ? new RegExp('\\b' + escaped + '\\b', 'gi')
+    : new RegExp(escaped, 'gi');
+}
+
 function applyGlossary(text, glossary) {
   if (!glossary || glossary.length === 0) return { text, placeholders: [] };
   const placeholders = [];
   let processed = text;
   glossary.forEach((entry, i) => {
-    const regex = new RegExp(entry.from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    const regex = glossaryRegex(entry.from);
     const placeholder = `§§${i}§§`;
     if (regex.test(processed)) {
       placeholders.push({ placeholder, to: entry.to || entry.from });

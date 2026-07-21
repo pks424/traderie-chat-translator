@@ -89,7 +89,8 @@ chrome.storage.local.get(['outLang', 'targetLang', 'autoTranslate', 'autoOutgoin
   aiApiKeyInput.value              = result.aiApiKey    || '';
   translationToneSelect.value      = result.translationTone || 'natural';
   showFloatingBtnChk.checked       = result.showFloatingBtn !== false;
-  glossary                         = result.glossary    || [];
+  // 저장된 적 없을 때만 기본 룬 사전 표시 (사용자가 전부 삭제한 빈 배열은 유지)
+  glossary                         = result.glossary    || DEFAULT_GLOSSARY.map(e => ({ ...e }));
   renderGlossary();
   updateProviderUI();
 });
