@@ -23,6 +23,7 @@ const glossaryAddBtn             = document.getElementById('glossaryAddBtn');
 
 // ─── 용어 사전 관리 ───
 let glossary = [];
+let editingIndex = -1; // 인라인 수정 중인 항목 인덱스 (-1 = 없음)
 
 function renderGlossary() {
   const countEl = document.getElementById('glossaryCount');
@@ -31,12 +32,74 @@ function renderGlossary() {
   glossary.forEach((entry, i) => {
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;align-items:center;gap:4px;margin-bottom:4px;padding:4px 8px;background:#f8f9fa;border-radius:4px;font-size:12px;';
-    row.innerHTML = `<span style="flex:1;"><b>${entry.from}</b> → ${entry.to || '<i>유지</i>'}</span>`;
+
+    if (editingIndex === i) {
+      // ── 수정 모드: 인라인 입력 2개 + 확인/취소 ──
+      const inputStyle = 'flex:1;min-width:0;padding:3px 6px;border:1px solid #1a73e8;border-radius:4px;font-size:12px;';
+      const fromInput = document.createElement('input');
+      fromInput.value = entry.from;
+      fromInput.style.cssText = inputStyle;
+      const toInput = document.createElement('input');
+      toInput.value = entry.to || '';
+      toInput.placeholder = '유지';
+      toInput.style.cssText = inputStyle;
+
+      const save = () => {
+        const from = fromInput.value.trim();
+        if (!from) return;
+        glossary[i] = { from, to: toInput.value.trim() };
+        editingIndex = -1;
+        renderGlossary();
+      };
+      const cancel = () => { editingIndex = -1; renderGlossary(); };
+
+      [fromInput, toInput].forEach(inp => inp.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') save();
+        if (e.key === 'Escape') cancel();
+      }));
+
+      const okBtn = document.createElement('button');
+      okBtn.textContent = '✓';
+      okBtn.title = '수정 완료 (Enter)';
+      okBtn.style.cssText = 'background:none;border:none;color:#137333;cursor:pointer;font-size:14px;padding:0 4px;';
+      okBtn.onclick = save;
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.textContent = '↩';
+      cancelBtn.title = '취소 (Esc)';
+      cancelBtn.style.cssText = 'background:none;border:none;color:#5f6368;cursor:pointer;font-size:14px;padding:0 4px;';
+      cancelBtn.onclick = cancel;
+
+      row.append(fromInput, toInput, okBtn, cancelBtn);
+      glossaryList.appendChild(row);
+      fromInput.focus();
+      return;
+    }
+
+    // ── 표시 모드: 클릭하면 수정 ──
+    const label = document.createElement('span');
+    label.style.cssText = 'flex:1;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+    label.title = '클릭하여 수정';
+    const b = document.createElement('b');
+    b.textContent = entry.from;
+    label.appendChild(b);
+    if (entry.to) {
+      label.appendChild(document.createTextNode(' → ' + entry.to));
+    } else {
+      const keep = document.createElement('i');
+      keep.textContent = ' → 유지';
+      keep.style.color = '#5f6368';
+      label.appendChild(keep);
+    }
+    label.onclick = () => { editingIndex = i; renderGlossary(); };
+
     const delBtn = document.createElement('button');
     delBtn.textContent = '✕';
+    delBtn.title = '삭제';
     delBtn.style.cssText = 'background:none;border:none;color:#d93025;cursor:pointer;font-size:14px;padding:0 4px;';
-    delBtn.onclick = () => { glossary.splice(i, 1); renderGlossary(); };
-    row.appendChild(delBtn);
+    delBtn.onclick = () => { glossary.splice(i, 1); editingIndex = -1; renderGlossary(); };
+
+    row.append(label, delBtn);
     glossaryList.appendChild(row);
   });
 }
