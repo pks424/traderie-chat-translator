@@ -25,6 +25,8 @@ const glossaryAddBtn             = document.getElementById('glossaryAddBtn');
 let glossary = [];
 
 function renderGlossary() {
+  const countEl = document.getElementById('glossaryCount');
+  if (countEl) countEl.textContent = glossary.length ? `(${glossary.length})` : '';
   glossaryList.innerHTML = '';
   glossary.forEach((entry, i) => {
     const row = document.createElement('div');
