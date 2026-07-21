@@ -124,7 +124,7 @@ async function getSettings() {
   return new Promise((resolve) => {
     if (!chrome.runtime?.id) return resolve({ ...DEFAULT_SETTINGS });
     try {
-      chrome.storage.local.get(['targetLang', 'outLang', 'autoTranslate', 'autoOutgoing', 'showOutgoingTranslation', 'cloudApiKey', 'aiProvider', 'aiApiKey', 'glossary', 'translationTone', 'showFloatingBtn'], (result) => {
+      chrome.storage.local.get(['targetLang', 'outLang', 'autoTranslate', 'autoOutgoing', 'showOutgoingTranslation', 'cloudApiKey', 'aiProvider', 'aiApiKey', 'glossary', 'glossaryInitialized', 'translationTone', 'showFloatingBtn'], (result) => {
         if (chrome.runtime.lastError) return resolve({ ...DEFAULT_SETTINGS });
         resolve({
           targetLang:               result.targetLang    || 'ko',
@@ -135,8 +135,10 @@ async function getSettings() {
           cloudApiKey:              result.cloudApiKey   || '',
           aiProvider:               result.aiProvider    || 'google_free',
           aiApiKey:                 result.aiApiKey      || '',
-          // 저장된 적 없을 때만 기본 룬 사전 적용 (사용자가 전부 삭제한 빈 배열은 유지)
-          glossary:                 result.glossary      || DEFAULT_GLOSSARY,
+          // 사전을 명시적으로 만진 적(glossaryInitialized) 없으면 기본 룬 사전 적용
+          // — 룬 사전 도입 전에 저장된 빈 배열도 기본값으로 마이그레이션
+          glossary:                 (result.glossary && result.glossary.length) ? result.glossary
+                                      : (result.glossaryInitialized ? [] : DEFAULT_GLOSSARY),
           translationTone:          result.translationTone || 'natural',
           showFloatingBtn:          result.showFloatingBtn !== false
         });
