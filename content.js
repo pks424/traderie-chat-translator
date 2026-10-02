@@ -285,7 +285,10 @@ async function fetchWithRetry(fetchFn, maxRetries = 3) {
       await new Promise(r => setTimeout(r, waitMs));
       continue;
     }
-    throw new Error(`API 요청 실패: ${response.status}`);
+    // 응답 본문의 거절 사유(error.message)를 함께 표시 (Claude/Gemini/OpenAI/Cloud 공통 형식)
+    const body = await response.json().catch(() => null);
+    const reason = body?.error?.message;
+    throw new Error(`API 요청 실패: ${response.status}${reason ? ` - ${reason}` : ''}`);
   }
   throw new Error('API rate limit 초과 - 최대 재시도 횟수 도달');
 }
@@ -553,7 +556,8 @@ async function translateIncomingMessage(msgElement, isOutgoing = false) {
     } else if (msg.includes('401') || msg.includes('403')) {
       showToast('⚠️ API 키 인증 실패 - 팝업에서 키를 확인하세요', 'error', 4000);
     } else {
-      showToast('⚠️ 번역 오류 발생', 'error', 2000);
+      showToast(`⚠️ 번역 오류 발생 - ${msg}`, 'error', 5000);
+      console.log('[TCT] 수신 번역 오류:', msg);
       delete msgElement.dataset.tctDone;
     }
   } finally {
