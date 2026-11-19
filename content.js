@@ -303,7 +303,8 @@ async function geminiTranslate(text, targetLang, sourceLang, apiKey, tone = 'nat
   const toneInst = getToneInstruction(tone);
   const contextInst = context ? `Previous messages for context:\n${context}\n\nNow translate this message:\n` : '';
   const prompt = `Translate the following text to ${targetName}. ${toneInst}Return ONLY the translated text, nothing else.\n\n${contextInst}${text}`;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  // gemini-2.0-flash 는 2026-06-01 서비스 종료 → 공식 권장 경량 안정판으로 교체
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${apiKey}`;
   const response = await fetchWithRetry(() => fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -330,13 +331,16 @@ async function claudeTranslate(text, targetLang, sourceLang, apiKey, tone = 'nat
       'anthropic-dangerous-direct-browser-access': 'true'
     },
     body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-haiku-5-5',
       max_tokens: 1024,
+      // 짧은 번역에는 사고 과정이 필요 없음 (Haiku 5.5 는 기본 effort(medium)에서 끌 수 있음)
+      thinking: { type: 'disabled' },
       messages: [{ role: 'user', content: prompt }]
     })
   }));
   const data = await response.json();
-  const translated = data.content?.[0]?.text?.trim();
+  // 응답 첫 블록이 thinking 일 수 있으므로 text 블록을 찾아 읽는다
+  const translated = data.content?.find(b => b.type === 'text')?.text?.trim();
   if (!translated) throw new Error('Claude 응답 없음');
   return { translated, detectedLang: detectLangFromResult(text, translated, targetLang, sourceLang) };
 }
@@ -382,6 +386,9 @@ async function googleTranslateCloudRetry(text, targetLang, sourceLang, apiKey) {
   };
 }
 
+// 직전 번역이 AI/Cloud 엔진 호출이었는지 (캐시·무료 번역·건너뜀이면 false)
+let lastCallUsedEngine = false;
+
 // 번역 통합 함수: 캐시 → 용어 사전 → 프로바이더 분기
 async function translate(text, targetLang = 'en', sourceLang = 'auto', msgElement = null) {
   const cached = getCachedTranslation(text, targetLang, sourceLang);
@@ -408,6 +415,8 @@ async function translate(text, targetLang = 'en', sourceLang = 'auto', msgElemen
       if (settings.cloudApiKey) result = await googleTranslateCloudRetry(processedText, targetLang, sourceLang, settings.cloudApiKey);
       break;
   }
+  // AI/Cloud 엔진으로 실제 번역했을 때만 큐 대기(속도 제한 회피)가 필요함
+  lastCallUsedEngine = !!result;
   if (!result) result = await googleTranslateFree(processedText, targetLang, sourceLang);
 
   if (placeholders.length > 0) {
@@ -480,6 +489,7 @@ function attachToInputBox(inputBox) {
       }
     } catch (err) {
       console.error('[TCT] 발신 번역 오류:', err);
+      showToast('⚠️ 발신 번역 실패 - 원문 그대로 전송했습니다', 'error', 4000);
     } finally {
       isTranslating = false;
       // React state 반영 대기 후 전송
@@ -552,7 +562,11 @@ async function translateIncomingMessage(msgElement, isOutgoing = false) {
     const msg = err.message || '';
     if (msg.includes('rate limit') || msg.includes('429')) {
       showToast('⚠️ API 사용량 초과 - 잠시 후 자동 재시도됩니다', 'error', 3000);
-      setTimeout(() => { delete msgElement.dataset.tctDone; }, 30000);
+      // 30초 뒤 표시를 지우고 다시 관찰 → 화면에 보이면 재번역 (unobserve 된 상태라 재등록 필요)
+      setTimeout(() => {
+        delete msgElement.dataset.tctDone;
+        if (msgElement.isConnected) visibilityObserver.observe(msgElement);
+      }, 30000);
     } else if (msg.includes('401') || msg.includes('403')) {
       showToast('⚠️ API 키 인증 실패 - 팝업에서 키를 확인하세요', 'error', 4000);
     } else {
@@ -627,8 +641,10 @@ async function processTranslateQueue() {
       const el = translateQueue.shift();
       if (el.dataset.tctDone) continue;
       const isOutgoing = el.dataset.tctOutgoing === '1';
+      lastCallUsedEngine = false;
       await translateIncomingMessage(el, isOutgoing);
-      if (delay && translateQueue.length > 0) await new Promise(r => setTimeout(r, delay));
+      // 실제로 AI 엔진을 호출했을 때만 대기 (캐시·건너뜀이면 바로 다음 메시지)
+      if (delay && lastCallUsedEngine && translateQueue.length > 0) await new Promise(r => setTimeout(r, delay));
     }
   } finally {
     isQueueProcessing = false;
@@ -665,11 +681,19 @@ function scanInputs() {
   });
 }
 
+// DOM 변경이 연달아 와도 150ms에 한 번만 검사 (변경마다 메시지 전체를 순회하던 부하 제거)
+const SCAN_INTERVAL_MS = 150;
+let scanScheduled = false;
 function observeChat() {
   const observer = new MutationObserver(() => {
-    onUrlMaybeChanged();
-    scanInputs();
-    processNewMessages();
+    if (scanScheduled) return;
+    scanScheduled = true;
+    setTimeout(() => {
+      scanScheduled = false;
+      onUrlMaybeChanged();
+      scanInputs();
+      processNewMessages();
+    }, SCAN_INTERVAL_MS);
   });
   observer.observe(document.body, { childList: true, subtree: true });
 }
