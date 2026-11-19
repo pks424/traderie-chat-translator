@@ -143,7 +143,8 @@
 
 배포 절차·등록 자료·체크리스트는 [STORE_ASSETS/store-description.md](STORE_ASSETS/store-description.md) 참조.
 
-- 배포 zip 생성: `python -c` 스크립트 또는 store-description.md의 명령 참조 (스토어 필수 파일만 포함)
+- 배포 zip 생성: `npm run build` → `dist/traderie-chat-translator-v{버전}.zip` (확장 실행 파일만 포함,
+  manifest·팝업·background 가 참조하는 파일이 빠지면 빌드 실패)
 - 개인정보처리방침: [privacy-policy.html](privacy-policy.html) → GitHub Pages로 호스팅
   (`https://pks424.github.io/traderie-chat-translator/privacy-policy.html`)
 - 스크린샷: `STORE_ASSETS/screenshot*.html`을 Chrome에서 열어 1280×800 캡처

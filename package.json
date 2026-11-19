@@ -1,0 +1,8 @@
+{
+  "name": "traderie-chat-translator",
+  "private": true,
+  "description": "Traderie 채팅 번역 Chrome 확장 — 배포 빌드용",
+  "scripts": {
+    "build": "node scripts/build.js"
+  }
+}

@@ -23,7 +23,7 @@
 </head>
 <body>
   <h1>Privacy Policy</h1>
-  <p class="updated">Last updated: July 14, 2026</p>
+  <p class="updated">Last updated: November 19, 2026</p>
 
   <p>
     <strong>Traderie Chat Translator</strong> ("the Extension") is a Chrome browser extension that
@@ -35,8 +35,18 @@
   <p>The Extension collects and processes the following data solely for the purpose of translation:</p>
   <ul>
     <li><strong>Message text</strong> – Text content of traderie.com chat messages is sent to the
-    translation service you select (see Section 3) to perform translation. Message text is never
-    stored by the Extension.</li>
+    translation service you select (see Section 3) to perform translation. When you select an AI
+    engine (Gemini, Claude or ChatGPT), up to three earlier messages in the same conversation are
+    also sent as context to improve translation quality.</li>
+    <li><strong>Per-chat settings</strong> – For each chat, the Extension may store the chat
+    partner's profile identifier (taken from the page address) together with a language code or an
+    on/off flag in <code>chrome.storage.local</code>, so that it can remember which language to use
+    for that chat and whether translation is turned off there. No message text is stored for this
+    purpose.</li>
+    <li><strong>Translation cache</strong> – To avoid translating the same text repeatedly, recent
+    message texts and their translations (up to 500 entries) are kept in
+    <code>chrome.storage.session</code>, an in-memory browser storage area that is cleared when the
+    browser is closed.</li>
     <li><strong>User preferences</strong> – Language settings (source and target language),
     toggle preferences (auto-translate on/off, show outgoing translation on/off), glossary entries,
     and optionally an API key for your chosen translation provider are stored locally in your
@@ -80,14 +90,19 @@
     </li>
   </ul>
   <p>
+    <strong>Fallback option</strong> – If you turn on "fall back to Google free translation on
+    failure" (off by default), text that your selected engine fails to translate is also sent to
+    Google Translate (free endpoint).
+  </p>
+  <p>
     Message text sent to these services is governed by their respective privacy policies and terms
     of service. We encourage you to review those policies.
   </p>
 
   <h2>4. Permissions Explained</h2>
   <ul>
-    <li><strong>storage</strong> – Saves your language preferences, glossary, and API keys locally
-    in the browser.</li>
+    <li><strong>storage</strong> – Saves your preferences, glossary, API keys and per-chat settings
+    locally in the browser, and keeps the translation cache for the browser session.</li>
     <li><strong>host_permissions (traderie.com)</strong> – Required to read and modify traderie
     chat message content for translation.</li>
     <li><strong>host_permissions (translate.googleapis.com, translation.googleapis.com,
@@ -97,10 +112,11 @@
 
   <h2>5. Data Retention</h2>
   <p>
-    Message text is processed in-memory only and is never stored. A small in-memory translation
-    cache (cleared when the tab closes) avoids re-translating identical text. User preference
-    settings are stored locally in your browser and can be cleared at any time by removing the
-    Extension or clearing browser storage.
+    The Extension does not keep message text beyond the translation cache described in Section 1,
+    which is cleared when the browser is closed. Preferences and per-chat settings are stored
+    locally in your browser and can be cleared at any time by removing the Extension or clearing
+    browser storage. Data sent to a translation service is retained according to that provider's
+    policy.
   </p>
 
   <h2>6. Children's Privacy</h2>

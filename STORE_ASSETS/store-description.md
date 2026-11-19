@@ -33,8 +33,14 @@ Keep item names like "Vex", "Ohm", "Enigma" untranslated — or map them to your
 **⚡ Efficient by Design**
 Only messages visible on screen are translated (viewport-based), identical texts are served from cache, and messages already in your language are skipped — minimizing API usage.
 
+**🌍 Per-Trader Language**
+The extension remembers the language each trader writes in, so your replies in that chat are automatically sent in their language.
+
+**🛟 Fallback Option**
+Optionally fall back to Google's free translation when your selected AI engine fails (for example, when credits run out).
+
 **⌨️ Per-Chat Toggle**
-Press **Alt+T** or use the floating button to turn translation on/off for each chat room individually.
+Use the floating button, or assign a shortcut (suggested: **Alt+T**) at `chrome://extensions/shortcuts`, to turn translation on/off for each chat room individually.
 
 ### How It Works
 1. Install the extension and open a chat on traderie.com.
@@ -42,7 +48,7 @@ Press **Alt+T** or use the floating button to turn translation on/off for each c
 3. Start chatting — translation happens automatically!
 
 ### Privacy
-The extension sends message text only to the translation service you select. No personal data is collected or stored by the extension itself. User preferences (language settings, glossary, API keys) are saved locally in your browser only.
+The extension sends message text only to the translation service you select (Google Translate by default). It has no server of its own and does not collect personal data. Settings, glossary and API keys are saved locally in your browser, and a short-lived translation cache is cleared when the browser closes. See the privacy policy for details.
 
 ---
 
