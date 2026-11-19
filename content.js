@@ -80,10 +80,38 @@ function syncToggleButton(show) {
   updateToggleButton();
 }
 
+// ─── 채팅방별 발신 언어: 상대 메시지에서 감지한 언어를 방(= 상대 프로필)마다 기억 ───
+const ROOM_LANG_MAX = 200;
+const ROOM_LANG_MIN_LATIN = 10; // 라틴 문자 메시지는 공백 제외 10자 이상일 때만 방 언어로 기억
+const roomLangs = {};
+
+// 발신 번역 언어: 방에서 기억한 언어 → 없으면 설정의 발신 언어
+function getRoomOutLang(settings) {
+  // 자동 OFF 이거나 발신 언어를 '번역 안 함'(내 언어)으로 둔 경우는 설정 그대로
+  if (!settings.autoRoomLang || settings.outLang === settings.targetLang) return settings.outLang;
+  return roomLangs[getCurrentRoomId()] || settings.outLang;
+}
+
+function rememberRoomLang(lang, settings) {
+  if (!settings.autoRoomLang || !LANG_NAMES[lang] || lang === settings.targetLang) return;
+  const roomId = getCurrentRoomId();
+  if (roomLangs[roomId] === lang) return;
+  delete roomLangs[roomId];          // 최근에 바뀐 방을 뒤로 보내 오래된 방부터 정리
+  roomLangs[roomId] = lang;
+  const keys = Object.keys(roomLangs);
+  if (keys.length > ROOM_LANG_MAX) delete roomLangs[keys[0]];
+  try { chrome.storage?.local?.set({ roomLangs }); } catch (e) { /* context invalidated */ }
+  // 오류·대체 번역 알림이 떠 있으면 덮어쓰지 않음 (show 클래스는 다음 프레임에 붙으므로 표시 타이머로 판정)
+  if (!(document.querySelector('.tct-toast.error') && toastTimer)) {
+    showToast(`이 채팅방 발신 언어: ${LANG_NAMES[lang]}`, 'info', 2500);
+  }
+}
+
 function ensureToggleButton() {
   try {
-    chrome.storage?.local?.get(['showFloatingBtn', 'disabledRooms'], (r) => {
+    chrome.storage?.local?.get(['showFloatingBtn', 'disabledRooms', 'roomLangs'], (r) => {
       if (r?.disabledRooms) r.disabledRooms.forEach(id => disabledRooms.add(id));
+      if (r?.roomLangs) Object.assign(roomLangs, r.roomLangs);
       syncToggleButton(r?.showFloatingBtn !== false);
     });
   } catch (e) { /* context invalidated */ }
@@ -119,12 +147,12 @@ function setCachedTranslation(text, targetLang, sourceLang, result) {
 
 // 설정 불러오기
 // glossary 기본값은 glossary-defaults.js의 DEFAULT_GLOSSARY (룬 33종)
-const DEFAULT_SETTINGS = { targetLang: 'ko', outLang: 'en', autoTranslate: true, autoOutgoing: true, showOutgoingTranslation: false, cloudApiKey: '', aiProvider: 'google_free', aiApiKey: '', glossary: DEFAULT_GLOSSARY, translationTone: 'natural', showFloatingBtn: true };
+const DEFAULT_SETTINGS = { targetLang: 'ko', outLang: 'en', autoTranslate: true, autoOutgoing: true, showOutgoingTranslation: false, cloudApiKey: '', aiProvider: 'google_free', aiApiKey: '', glossary: DEFAULT_GLOSSARY, translationTone: 'natural', showFloatingBtn: true, autoRoomLang: true, fallbackFree: false };
 async function getSettings() {
   return new Promise((resolve) => {
     if (!chrome.runtime?.id) return resolve({ ...DEFAULT_SETTINGS });
     try {
-      chrome.storage.local.get(['targetLang', 'outLang', 'autoTranslate', 'autoOutgoing', 'showOutgoingTranslation', 'cloudApiKey', 'aiProvider', 'aiApiKey', 'glossary', 'glossaryInitialized', 'translationTone', 'showFloatingBtn'], (result) => {
+      chrome.storage.local.get(['targetLang', 'outLang', 'autoTranslate', 'autoOutgoing', 'showOutgoingTranslation', 'cloudApiKey', 'aiProvider', 'aiApiKey', 'glossary', 'glossaryInitialized', 'translationTone', 'showFloatingBtn', 'autoRoomLang', 'fallbackFree'], (result) => {
         if (chrome.runtime.lastError) return resolve({ ...DEFAULT_SETTINGS });
         resolve({
           targetLang:               result.targetLang    || 'ko',
@@ -140,7 +168,9 @@ async function getSettings() {
           glossary:                 (result.glossary && result.glossary.length) ? result.glossary
                                       : (result.glossaryInitialized ? [] : DEFAULT_GLOSSARY),
           translationTone:          result.translationTone || 'natural',
-          showFloatingBtn:          result.showFloatingBtn !== false
+          showFloatingBtn:          result.showFloatingBtn !== false,
+          autoRoomLang:             result.autoRoomLang !== false,   // 기본 ON
+          fallbackFree:             result.fallbackFree === true     // 기본 OFF (켜야만 Google 무료로 전송)
         });
       });
     } catch (e) {
@@ -207,6 +237,13 @@ function detectLanguageByScript(text) {
   if (arabic / total > 0.3) return 'ar';
   if (thai / total > 0.3) return 'th';
   return 'unknown';
+}
+
+// 내가 쓴 문장이 이미 보낼 언어인지 (글자 종류로 판정 — API 호출 전 사전 확인)
+// 라틴 문자 언어끼리는 글자로 구분할 수 없으므로, 보낼 언어가 영어일 때만 라틴 문장을 영어로 본다
+function isAlreadyInLang(text, lang) {
+  const script = detectLanguageByScript(text);
+  return script === lang || (script === 'latin' && lang === 'en');
 }
 
 // 메시지 텍스트 추출 (번역 뱃지 제외)
@@ -401,29 +438,49 @@ async function translate(text, targetLang = 'en', sourceLang = 'auto', msgElemen
   const context = (isAI && msgElement) ? getConversationContext(msgElement) : '';
 
   let result;
-  switch (settings.aiProvider) {
-    case 'gemini':
-      if (settings.aiApiKey) result = await geminiTranslate(processedText, targetLang, sourceLang, settings.aiApiKey, tone, context);
-      break;
-    case 'claude':
-      if (settings.aiApiKey) result = await claudeTranslate(processedText, targetLang, sourceLang, settings.aiApiKey, tone, context);
-      break;
-    case 'openai':
-      if (settings.aiApiKey) result = await openaiTranslate(processedText, targetLang, sourceLang, settings.aiApiKey, tone, context);
-      break;
-    case 'google_cloud':
-      if (settings.cloudApiKey) result = await googleTranslateCloudRetry(processedText, targetLang, sourceLang, settings.cloudApiKey);
-      break;
+  let fellBack = false;
+  try {
+    switch (settings.aiProvider) {
+      case 'gemini':
+        if (settings.aiApiKey) result = await geminiTranslate(processedText, targetLang, sourceLang, settings.aiApiKey, tone, context);
+        break;
+      case 'claude':
+        if (settings.aiApiKey) result = await claudeTranslate(processedText, targetLang, sourceLang, settings.aiApiKey, tone, context);
+        break;
+      case 'openai':
+        if (settings.aiApiKey) result = await openaiTranslate(processedText, targetLang, sourceLang, settings.aiApiKey, tone, context);
+        break;
+      case 'google_cloud':
+        if (settings.cloudApiKey) result = await googleTranslateCloudRetry(processedText, targetLang, sourceLang, settings.cloudApiKey);
+        break;
+    }
+  } catch (err) {
+    // 'AI 실패 시 무료 번역 대체'를 켠 경우에만 Google 무료 번역으로 넘긴다
+    if (!settings.fallbackFree) throw err;
+    notifyFallback(settings.aiProvider, err);
+    result = await googleTranslateFree(processedText, targetLang, sourceLang);
+    fellBack = true;
   }
-  // AI/Cloud 엔진으로 실제 번역했을 때만 큐 대기(속도 제한 회피)가 필요함
-  lastCallUsedEngine = !!result;
+  // AI/Cloud 엔진으로 실제 번역했을 때만 큐 대기(속도 제한 회피)가 필요함 (대체 번역이면 대기 안 함)
+  lastCallUsedEngine = !!result && !fellBack;
   if (!result) result = await googleTranslateFree(processedText, targetLang, sourceLang);
 
   if (placeholders.length > 0) {
     result = { ...result, translated: restoreGlossary(result.translated, placeholders) };
   }
-  setCachedTranslation(text, targetLang, sourceLang, result);
+  // 대체 번역은 저장하지 않음 → 키·크레딧 복구 후 다시 AI 로 번역
+  if (!fellBack) setCachedTranslation(text, targetLang, sourceLang, result);
   return result;
+}
+
+// 대체 번역 알림 (메시지마다 뜨지 않도록 1분에 한 번)
+const PROVIDER_NAMES = { google_cloud: 'Google Cloud', gemini: 'Gemini', claude: 'Claude', openai: 'ChatGPT' };
+let lastFallbackToastAt = 0;
+function notifyFallback(provider, err) {
+  console.warn('[TCT] 번역 엔진 실패 → Google 무료 번역으로 대체:', err.message);
+  if (Date.now() - lastFallbackToastAt < 60000) return;
+  lastFallbackToastAt = Date.now();
+  showToast(`⚠️ ${PROVIDER_NAMES[provider] || provider} 번역 실패 → Google 무료 번역으로 대체 (${err.message})`, 'error', 5000);
 }
 
 // ─────────────────────────────────────────
@@ -483,9 +540,13 @@ function attachToInputBox(inputBox) {
       const settings = await getSettings();
       if (!settings.autoOutgoing) { isTranslating = false; sendMessage(); return; }
 
-      const { translated, detectedLang } = await translate(text, settings.outLang, 'auto');
-      if (detectedLang !== settings.outLang && translated) {
-        setInputValue(inputBox, translated);
+      const outLang = getRoomOutLang(settings);
+      // 이미 보낼 언어로 쓴 문장이면 API 호출 없이 그대로 전송
+      if (!isAlreadyInLang(text, outLang)) {
+        const { translated, detectedLang } = await translate(text, outLang, 'auto');
+        if (detectedLang !== outLang && translated) {
+          setInputValue(inputBox, translated);
+        }
       }
     } catch (err) {
       console.error('[TCT] 발신 번역 오류:', err);
@@ -558,6 +619,11 @@ async function translateIncomingMessage(msgElement, isOutgoing = false) {
     if (!translated || translated.trim().toLowerCase() === text.toLowerCase()) return;
 
     msgElement.appendChild(createTranslationBadge(translated));
+
+    // 상대 메시지 언어를 이 방의 발신 언어로 기억 (API 감지값 우선, 없으면 문자 기반 감지값)
+    // 짧은 라틴 문장(ok, ty 등)은 언어 감지가 불안정해 제외
+    const tooShortLatin = preDetected === 'latin' && text.replace(/\s/g, '').length < ROOM_LANG_MIN_LATIN;
+    if (!isOutgoing && !tooShortLatin) rememberRoomLang(LANG_NAMES[detectedLang] ? detectedLang : preDetected, settings);
   } catch (err) {
     const msg = err.message || '';
     if (msg.includes('rate limit') || msg.includes('429')) {
@@ -714,6 +780,10 @@ try {
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'local' && changes.showFloatingBtn) {
       syncToggleButton(changes.showFloatingBtn.newValue !== false);
+    }
+    // 다른 탭에서 기억한 방 언어도 합침 (덮어써서 잃지 않도록)
+    if (area === 'local' && changes.roomLangs?.newValue) {
+      Object.assign(roomLangs, changes.roomLangs.newValue);
     }
   });
 } catch (e) { /* extension context invalidated */ }

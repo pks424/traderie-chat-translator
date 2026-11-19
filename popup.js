@@ -20,6 +20,9 @@ const glossaryList               = document.getElementById('glossaryList');
 const glossaryFromInput          = document.getElementById('glossaryFrom');
 const glossaryToInput            = document.getElementById('glossaryTo');
 const glossaryAddBtn             = document.getElementById('glossaryAddBtn');
+const autoRoomLangChk            = document.getElementById('autoRoomLang');
+const fallbackFreeChk            = document.getElementById('fallbackFree');
+const fallbackField              = document.getElementById('fallbackField');
 
 // ─── 용어 사전 관리 ───
 let glossary = [];
@@ -129,6 +132,8 @@ function updateProviderUI() {
   cloudKeyField.style.display = config.showCloud ? 'block' : 'none';
   // AI 엔진일 때만 톤 설정 표시
   toneField.style.display = (provider === 'gemini' || provider === 'claude' || provider === 'openai') ? 'block' : 'none';
+  // 대체 번역은 키가 필요한 엔진에서만 의미 있음
+  fallbackField.style.display = provider !== 'google_free' ? '' : 'none';
 
   if (config.showKey) {
     apiKeyLabel.textContent       = config.label;
@@ -140,7 +145,7 @@ function updateProviderUI() {
 aiProviderSelect.addEventListener('change', updateProviderUI);
 
 // 저장된 설정 불러오기
-chrome.storage.local.get(['outLang', 'targetLang', 'autoTranslate', 'autoOutgoing', 'showOutgoingTranslation', 'cloudApiKey', 'aiProvider', 'aiApiKey', 'glossary', 'glossaryInitialized', 'translationTone', 'showFloatingBtn', 'initialized'], (result) => {
+chrome.storage.local.get(['outLang', 'targetLang', 'autoTranslate', 'autoOutgoing', 'showOutgoingTranslation', 'cloudApiKey', 'aiProvider', 'aiApiKey', 'glossary', 'glossaryInitialized', 'translationTone', 'showFloatingBtn', 'autoRoomLang', 'fallbackFree', 'initialized'], (result) => {
   if (!result.initialized) {
     setupBanner.classList.add('visible');
   }
@@ -154,6 +159,8 @@ chrome.storage.local.get(['outLang', 'targetLang', 'autoTranslate', 'autoOutgoin
   aiApiKeyInput.value              = result.aiApiKey    || '';
   translationToneSelect.value      = result.translationTone || 'natural';
   showFloatingBtnChk.checked       = result.showFloatingBtn !== false;
+  autoRoomLangChk.checked          = result.autoRoomLang !== false;
+  fallbackFreeChk.checked          = result.fallbackFree === true;
   // 사전을 명시적으로 만진 적 없으면 기본 룬 사전 표시
   // — 룬 사전 도입 전에 저장된 빈 배열도 기본값으로 마이그레이션
   glossary = (result.glossary && result.glossary.length) ? result.glossary
@@ -187,7 +194,9 @@ saveBtn.addEventListener('click', () => {
     aiApiKey:                 aiApiKeyInput.value.trim(),
     translationTone:          translationToneSelect.value,
     showFloatingBtn:          showFloatingBtnChk.checked,
-    glossary:                 glossary,
+    autoRoomLang:             autoRoomLangChk.checked,
+    fallbackFree:             fallbackFreeChk.checked,
+    glossary:                glossary,
     glossaryInitialized:      true, // 이후 빈 배열 저장 = "전부 삭제" 의사로 존중
     initialized:              true
   };
